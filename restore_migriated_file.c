@@ -158,10 +158,12 @@ void restore_migrated_files(char *temp_migrated_file_path, char *temp_migrated_d
 						storage_buffer.chunks = g_sequence_new(free_chunk);
 					}
 
-					fseek(data_filep, p->migrated_chunk_offset[j], SEEK_SET);
+					if ( 0 != fseek(data_filep, p->migrated_chunk_offset[j], SEEK_SET)) {
+						printf("fseek failed, can't seek %lu offset\n", p->migrated_chunk_offset[j]);
+					}
 					data = malloc(p->arr[j]);	
 					if (1 != fread(data, p->arr[j], 1, data_filep)) {
-						printf("read error\n");
+						printf("read error, expect read data size:%d from offset:%ld\n", p->arr[j], ftell(data_filep));
 					}
 
 		        	ruc = (struct chunk *)malloc(sizeof(struct chunk));

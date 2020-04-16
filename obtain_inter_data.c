@@ -215,6 +215,10 @@ void rewrite_container(char *path1)
 	FILE *migrated_temp_fp = NULL;
 	sprintf(migrated_temp_path, "%s/similar_file_data", path1);
 	migrated_temp_fp = fopen(migrated_temp_path, "w");
+	if (NULL == migrated_temp_fp) {
+		printf("fopen %s failed\n", migrated_temp_path);
+		exit(-1);
+	}
 
 	char pool_path[128] = {0};
 	sprintf(pool_path, "%s/container.pool", path1);
@@ -303,9 +307,18 @@ void rewrite_container(char *path1)
 
 				remained_unique_chunks++;
 				remained_unique_chunks_size += me->len;
-			} else if ( (mc = g_hash_table_lookup(need_migrated_chunks, &me->fp)) != NULL ) {
-				mc->id = ftell(migrated_temp_fp);
-				fwrite(c->data + me->off, me->len, 1, migrated_temp_fp);
+			}
+			if ( (mc = g_hash_table_lookup(need_migrated_chunks, &me->fp)) != NULL ) {
+				long cur_off = ftell(migrated_temp_fp);
+				if (-1 == cur_off) {
+					printf("ftell failed, errcode:%d\n", errno);
+					exit(-1);	
+				}
+				mc->id =(uint64_t) cur_off;
+				if (1 != fwrite(c->data + me->off, me->len, 1, migrated_temp_fp)) {
+					printf("write migrated chunks to file failed, len:%d in file offset:%ld\n", me->len, mc->id);
+					exit(-1);	
+				}
 
 				migrated_unique_chunks++;
 				migrated_unique_chunks_size += me->len;
@@ -753,6 +766,9 @@ void *read_remained_files_data_thread(void *arg) {
 	    		recordbufoff += sizeof(containerid);
 	    		memcpy(recordbuf + recordbufoff, &chunk_size, sizeof(chunk_size)); 
 	    		recordbufoff += sizeof(chunk_size);
+			} else {
+				printf("remained file's chunk can't finded in remaine_chunks\n");
+				exit(-1);
 			}
 		}
 		if (NULL != one_file->fps)
