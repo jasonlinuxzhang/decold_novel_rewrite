@@ -1,1 +1,1 @@
-# decold_novel_rewrite
+# decold_data
